@@ -14,6 +14,7 @@ import {
   KeyRoundIcon,
   XCircleIcon,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Message, MessageContent, MessageResponse } from "@/components/ai-elements/message";
 import { Reasoning, ReasoningContent, ReasoningTrigger } from "@/components/ai-elements/reasoning";
 import {
@@ -25,6 +26,7 @@ import {
 } from "@/components/ai-elements/tool";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { FileArtifactRenderer, hasFileArtifactRenderer } from "./file-artifact-renderer";
 
 export type AgentInputResponse = {
   readonly optionId?: string;
@@ -102,28 +104,50 @@ function AgentMessagePart({
     case "authorization":
       return <AuthorizationPrompt part={part} />;
     case "dynamic-tool":
-      return (
-        <Tool
-          defaultOpen={part.state === "approval-requested" || part.state === "approval-responded"}
-        >
-          <ToolHeader
-            state={part.state}
-            title={part.toolName}
-            toolName={part.toolName}
-            type="dynamic-tool"
-          />
-          <ToolContent>
-            <ToolInput input={part.input} />
-            <InputRequestActions
-              canRespond={canRespond}
-              part={part}
-              onInputResponses={onInputResponses}
-            />
-            <ToolOutput errorText={part.errorText} output={part.output} />
-          </ToolContent>
-        </Tool>
-      );
+      return <DynamicToolMessagePart canRespond={canRespond} onInputResponses={onInputResponses} part={part} />;
   }
+}
+
+function DynamicToolMessagePart({
+  canRespond,
+  onInputResponses,
+  part,
+}: {
+  readonly canRespond: boolean;
+  readonly onInputResponses: (responses: readonly AgentInputResponse[]) => void | Promise<void>;
+  readonly part: EveDynamicToolPart;
+}) {
+  const rendersFileArtifact = hasFileArtifactRenderer(part);
+  const [open, setOpen] = useState(
+    rendersFileArtifact || part.state === "approval-requested" || part.state === "approval-responded",
+  );
+
+  useEffect(() => {
+    if (rendersFileArtifact) {
+      setOpen(true);
+    }
+  }, [rendersFileArtifact]);
+
+  return (
+    <Tool onOpenChange={setOpen} open={open}>
+      <ToolHeader
+        state={part.state}
+        title={part.toolName}
+        toolName={part.toolName}
+        type="dynamic-tool"
+      />
+      <ToolContent>
+        <ToolInput input={part.input} />
+        <InputRequestActions
+          canRespond={canRespond}
+          part={part}
+          onInputResponses={onInputResponses}
+        />
+        <FileArtifactRenderer part={part} />
+        {rendersFileArtifact ? null : <ToolOutput errorText={part.errorText} output={part.output} />}
+      </ToolContent>
+    </Tool>
+  );
 }
 
 function AttachmentPart({ part }: { readonly part: EveFilePart }) {

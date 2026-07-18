@@ -20,8 +20,8 @@ const mono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "eve-chat-agent",
-  description: "A Next.js starter for eve agents with AI Elements.",
+  title: "Self-Hosted Eve Agent",
+  description: "A self-hosted chat interface for an Eve agent.",
 };
 
 export default function RootLayout({ children }: { readonly children: ReactNode }) {
