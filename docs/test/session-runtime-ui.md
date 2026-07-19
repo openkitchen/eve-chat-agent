@@ -9,7 +9,7 @@
 - Next UI 运行在 `http://127.0.0.1:3000`，Eve sidecar 可通过现有 proxy 访问。
 - `.eve/.workflow-data/streams/runs/` 至少有两个由本项目创建的 `wrun_*.json` manifest，其中一个可通过 Eve stream 恢复。
 - runtime status happy path 使用已切换的 `microsandbox()` backend，并至少创建一个 Eve session VM。
-- 测试浏览器请求来自 loopback；生产模式不挂载 `/api/local/*`。
+- 测试应覆盖 development 和 production 两种启动模式；两种模式都挂载 `/api/local/*`。当前 POC 没有权限控制，因此不要求 loopback 或认证头。
 
 ## Happy path
 
@@ -35,7 +35,7 @@
 2. 断言 history dialog 仍显示本地 session ID；runtime dialog 显示 Eve unreachable，聊天 UI 不崩溃。
 3. 让 `allSandboxMetrics()` 抛出或当前 backend 不是 microsandbox。
 4. 断言 Eve 区仍可显示，MicroSandbox 区显示 unavailable；`eveManagedSandboxCount` 不伪造为 0。
-5. 以 production mode 或非 loopback route request 验证 `/api/local/sessions` 和 `/api/local/runtime` 不暴露数据。
+5. 以 production mode 请求 `/api/local/sessions` 和 `/api/local/runtime`，断言仍返回 200 和 allowlisted response；记录当前 POC 没有权限控制的已知边界。
 
 ## 自动检查
 

@@ -90,14 +90,6 @@ export async function getHostMetrics(): Promise<Record<string, RuntimeMetric>> {
   return Object.fromEntries(Object.entries(metrics).filter(([name]) => activeNames.has(name)));
 }
 
-export function isLocalDiagnosticsRequest(request: Request): boolean {
-  if (process.env.NODE_ENV === "production") return false;
-  const host = hostnameFrom(request.headers.get("host"));
-  const forwardedFor = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  return (host === "localhost" || host === "127.0.0.1" || host === "::1") &&
-    (forwardedFor === undefined || forwardedFor === "127.0.0.1" || forwardedFor === "::1" || forwardedFor === "::ffff:127.0.0.1");
-}
-
 function defaultRunDirectory(): string {
   return join(process.cwd(), ".eve", ".workflow-data", "streams", "runs");
 }
@@ -175,14 +167,4 @@ function stringAt(value: unknown): string | undefined {
 
 function isMissingDirectory(error: unknown): boolean {
   return typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
-}
-
-function hostnameFrom(value: string | null): string | undefined {
-  if (!value) return undefined;
-  const normalized = value.toLowerCase();
-  if (normalized.startsWith("[")) {
-    const end = normalized.indexOf("]");
-    return end > 1 ? normalized.slice(1, end) : undefined;
-  }
-  return normalized.split(":")[0];
 }

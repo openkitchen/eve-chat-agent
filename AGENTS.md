@@ -19,3 +19,9 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 <!-- END:nextjs-agent-rules -->
+
+## POC scope and runtime behavior
+
+- Do not disable an existing feature merely because the app is started with a production build or `npm start`.
+- This project is a self-hosted POC without authorization by default. Session history, runtime status, and other existing UI/API behavior must work in both development and production modes unless the user explicitly requests a restriction.
+- If authorization, tenancy, or exposure controls are needed, treat them as explicit requirements: document the boundary, add the control deliberately, and test both the enabled and disabled paths. Do not add implicit `NODE_ENV` guards as a substitute.

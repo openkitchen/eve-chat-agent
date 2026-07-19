@@ -7,7 +7,7 @@
 1. 历史 Eve session 列表：列出当前项目工作目录中已持久化的 session，点击后以现有 `?session_id=<id>` 恢复聊天。
 2. 运行时状态：打开一个只读弹窗，显示当前 Eve inspection、MicroSandbox 活动数量和可安全取得的 metrics。
 
-这是**本机开发诊断 UI**，不是业务用户的会话中心，也不是生产监控系统。它只面向启动该 Next/Eve 实例的本机用户；生产版必须由宿主业务系统提供身份、session ownership、保留与审计。
+这是一个 POC 运行时 UI，不是完整的业务会话中心，也不是生产监控系统。当前没有权限控制：能访问 Web UI 的请求也能访问这两个摘要 API。后续接入业务用户时，再由宿主应用补充身份、session ownership、保留与审计。
 
 ## 已验证的数据边界
 
@@ -15,7 +15,7 @@ Eve 0.24.6 的公开 HTTP API 有：`GET /eve/v1/info`、单个 session 的 stre
 
 因此不能伪造一个“Eve session list API”。本设计新增两个 Next server route，作为本机 adapter：
 
-- 它们只在开发模式挂载，并只接受 loopback 请求；production 返回 `404`。
+- 它们在 development 和 production 构建中都挂载，暂不做认证或权限校验。
 - 不能从浏览器读取 `.eve`、`~/.microsandbox` 或执行 `msb` CLI。
 - route 返回 allowlisted 的摘要，不返回 continuation token、模型 prompt、会话消息、文件内容、sandbox 路径、命令或环境变量。
 
@@ -138,7 +138,7 @@ AgentChat header
 - Eve sidecar 不可达：状态 dialog 显示 Eve unreachable；历史列表仍可从本地 manifest 返回 ID，但点击后会由既有恢复流程显示错误。
 - MicroSandbox 未安装、API 调用失败或当前 backend 不是 microsandbox：保留 Eve 状态，MicroSandbox 区显示 unavailable；不在 route 内安装 runtime，也不启动/停止 VM。
 - 本地 manifest 不存在或已清理：返回空数组，不报 500。
-- 生产环境、非 loopback 请求或未通过宿主认证的请求：不暴露任一 local route。未来 production 实现必须改为宿主数据库的 thread/session 映射与 RBAC，不能复用 `.eve` 扫描。
+- 当前 POC 不区分 development 和 production，也不校验请求来源；未来接入真实用户前必须增加宿主认证、session ownership 和 RBAC，不能直接把 `.eve` 扫描结果当作多用户会话列表。
 
 ## 非目标
 

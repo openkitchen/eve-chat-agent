@@ -309,7 +309,7 @@ type AsyncState<T> =
 
 async function fetchSessions(): Promise<LocalSessionsResponse> {
   const response = await fetch("/api/local/sessions", { cache: "no-store" });
-  if (!response.ok) throw new Error("Local session history is unavailable.");
+  if (!response.ok) throw new Error(`Local session history request failed (${response.status}).`);
   return await response.json() as LocalSessionsResponse;
 }
 

@@ -29,7 +29,7 @@ The browser and Eve routes are served by the same local Next.js application. The
 
 ## Session behavior
 
-Eve creates a durable session from the first message and returns a `continuationToken`. Follow-up messages reuse it. After the first response, the UI puts the stable Eve `sessionId` in `?session_id=...`; loading that URL replays the local session stream and restores its continuation token. The header also exposes a development-only local session index. Session lifecycle and retention should be owned by the eventual host application, which should map its thread ID to Eve's session identity and apply its own expiry policy.
+Eve creates a durable session from the first message and returns a `continuationToken`. Follow-up messages reuse it. After the first response, the UI puts the stable Eve `sessionId` in `?session_id=...`; loading that URL replays the local session stream and restores its continuation token. The header also exposes a local session index backed by the project's Eve run manifests. This POC does not add authorization; a deployment that serves the UI to multiple users must add session ownership and retention in the host application.
 
 ## Sandbox and uploads
 
@@ -38,7 +38,7 @@ Eve creates a durable session from the first message and returns a `continuation
 - Each durable Eve session gets an Eve-managed lightweight Linux VM with a persistent `/workspace` across turns in the same running server.
 - The VM has real Bash, core utilities, Python 3 and Python standard-library `csv`, `sqlite3`, `json`, `zipfile`, and `xml`. The template bootstrap creates `/workspace/analysis` and verifies the Python baseline.
 - This POC fixes `cpus: 1`, `memoryMiB: 1024`, and `networkPolicy: "deny-all"`. There is no Docker dependency and no online package installation during bootstrap.
-- Eve owns VM creation and shutdown. The UI does not start, stop, or delete VM processes. A development-only runtime-status dialog reads Eve inspection data and a best-effort MicroSandbox metrics snapshot.
+- Eve owns VM creation and shutdown. The UI does not start, stop, or delete VM processes. The runtime-status dialog reads Eve inspection data and a best-effort MicroSandbox metrics snapshot.
 
 The standard `bash`, `read_file`, `write_file`, and `grep` tools are available to the root agent. The restricted `glob` wrapper remains in place for the deterministic attachment tool flow. The authoritative lifecycle constraints and current restart-recovery limitation are in `docs/design/microsandbox-lifecycle.md`.
 

@@ -2,7 +2,7 @@ import { mkdtemp, symlink, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { isLocalDiagnosticsRequest, listLocalSessions, readLocalRuntime } from "./local-diagnostics";
+import { listLocalSessions, readLocalRuntime } from "./local-diagnostics";
 
 const temporaryRoots: string[] = [];
 
@@ -106,9 +106,4 @@ describe("local diagnostics", () => {
     });
   });
 
-  it("admits only local development requests", () => {
-    expect(isLocalDiagnosticsRequest(new Request("http://127.0.0.1:3000/api/local/runtime", { headers: { host: "127.0.0.1:3000" } }))).toBe(true);
-    expect(isLocalDiagnosticsRequest(new Request("http://127.0.0.1:3000/api/local/runtime", { headers: { host: "127.0.0.1:3000", "x-forwarded-for": "::ffff:127.0.0.1" } }))).toBe(true);
-    expect(isLocalDiagnosticsRequest(new Request("http://example.test/api/local/runtime", { headers: { host: "example.test" } }))).toBe(false);
-  });
 });
