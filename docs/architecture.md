@@ -2,7 +2,7 @@
 
 ## Scope
 
-This is a self-hosted Eve chat agent. It provides a browser chat UI, durable Eve sessions, an OpenAI-compatible model provider, local tracing through Phoenix, and a lightweight local sandbox for uploaded files.
+This is a self-hosted Eve chat agent. It provides a browser chat UI, durable Eve sessions, an OpenAI-compatible model provider, local tracing through Phoenix, and a local MicroSandbox VM for uploaded-file analysis.
 
 ## Runtime topology
 
@@ -13,7 +13,7 @@ Browser
   -> Eve durable session and default harness
       -> OpenAI-compatible API (`OPENAI_BASE_URL`, `OPENAI_API_KEY`, `OPENAI_MODEL`)
       -> built-in tools and authored tools
-      -> just-bash virtual sandbox
+      -> Eve-managed MicroSandbox VM
   -> OpenTelemetry exporter
   -> Phoenix (`http://127.0.0.1:6006`)
 ```
@@ -29,20 +29,20 @@ The browser and Eve routes are served by the same local Next.js application. The
 
 ## Session behavior
 
-Eve creates a durable session from the first message and returns a `continuationToken`. Follow-up messages reuse it. The React hook currently owns that cursor in browser memory, so a page reload starts a new Eve session. Session lifecycle and retention should be owned by the eventual host application, which should map its thread ID to Eve's session identity and apply its own expiry policy.
+Eve creates a durable session from the first message and returns a `continuationToken`. Follow-up messages reuse it. After the first response, the UI puts the stable Eve `sessionId` in `?session_id=...`; loading that URL replays the local session stream and restores its continuation token. The header also exposes a development-only local session index. Session lifecycle and retention should be owned by the eventual host application, which should map its thread ID to Eve's session identity and apply its own expiry policy.
 
 ## Sandbox and uploads
 
-`agent/sandbox.ts` pins the sandbox to the local `programmable-just-bash` backend.
+`agent/sandbox.ts` pins the sandbox to Eve's official local `microsandbox()` backend.
 
-- It is a pure-JavaScript Bash interpreter with no VM, Docker daemon, or `msb` process.
-- Its filesystem is virtual and persisted locally below `.eve/sandbox-cache/programmable-just-bash/`; it is not an arbitrary host-directory shell.
-- It runs a simulated shell command set such as Bash, awk, jq, sqlite3, and CSV utilities. It additionally provides an `xlsx` virtual command backed by the app's ExcelJS dependency. It cannot execute host binaries such as `node`, `git`, or package managers.
-- Network policy and credential brokering are not available on this backend.
+- Each durable Eve session gets an Eve-managed lightweight Linux VM with a persistent `/workspace` across turns in the same running server.
+- The VM has real Bash, core utilities, Python 3 and Python standard-library `csv`, `sqlite3`, `json`, `zipfile`, and `xml`. The template bootstrap creates `/workspace/analysis` and verifies the Python baseline.
+- This POC fixes `cpus: 1`, `memoryMiB: 1024`, and `networkPolicy: "deny-all"`. There is no Docker dependency and no online package installation during bootstrap.
+- Eve owns VM creation and shutdown. The UI does not start, stop, or delete VM processes. A development-only runtime-status dialog reads Eve inspection data and a best-effort MicroSandbox metrics snapshot.
 
-The standard `bash`, `read_file`, `write_file`, and `grep` tools are available to the root agent. The restricted `glob` wrapper remains in place for the deterministic attachment tool flow. `docs/design/programmable-justbash.md` records the custom backend's command contract and lifecycle requirements.
+The standard `bash`, `read_file`, `write_file`, and `grep` tools are available to the root agent. The restricted `glob` wrapper remains in place for the deterministic attachment tool flow. The authoritative lifecycle constraints and current restart-recovery limitation are in `docs/design/microsandbox-lifecycle.md`.
 
-The chat UI sends browser uploads as Eve file parts. Eve validates the default upload policy (25 MB, all media types), stages byte-backed uploads under `/workspace/attachments`, and gives the model a sandbox reference. The agent can inspect text-like files with its built-in file tools. This is suitable for exploration and simple text/CSV work, but not deterministic XLSX/PDF parsing.
+The chat UI sends browser uploads as Eve file parts. Eve validates the default upload policy (25 MB, all media types), stages byte-backed uploads under `/workspace/attachments`, and gives the model a sandbox reference. The agent can inspect text-like files with its built-in file tools. This is suitable for exploration and simple text/CSV work. Deterministic CSV/XLSX discovery and querying are handled by authored tools in the application runtime, rather than by assuming an arbitrary XLSX CLI exists in the VM.
 
 For production-grade file processing, add a host-owned upload service and a constrained parser interface. An existing file-parsing MCP server is a valid implementation of that interface:
 

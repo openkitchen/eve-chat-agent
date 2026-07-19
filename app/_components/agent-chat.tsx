@@ -22,6 +22,7 @@ import {
 } from "@/components/ai-elements/prompt-input";
 import { cn } from "@/lib/utils";
 import { AgentMessage } from "./agent-message";
+import { LocalDiagnosticsControls, LocalSessionSidebar } from "./local-diagnostics-controls";
 import { SessionDiagnostics } from "./session-diagnostics";
 import { fetchRecoveredEveSession, readSessionId, replaceSessionUrl, type RecoveredEveSession } from "./session-recovery";
 
@@ -158,13 +159,16 @@ function AgentChatSession({
   );
 
   return (
-    <main className="flex h-dvh flex-col overflow-hidden bg-background text-foreground">
-      {isEmpty ? null : (
-        <header className="flex h-14 shrink-0 items-center justify-center gap-3 px-4">
+    <main className="flex h-dvh overflow-hidden bg-background text-foreground">
+      <LocalSessionSidebar currentSessionId={agent.session.sessionId} />
+      <section className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <header className="grid h-14 shrink-0 grid-cols-[1fr_auto_1fr] items-center px-4 pl-14 md:pl-4">
+          <div className="flex items-center gap-2">
+            {isEmpty ? null : <StatusDot status={agent.status} />}
+          </div>
           <span className="truncate text-muted-foreground text-sm">{AGENT_NAME}</span>
-          <StatusDot status={agent.status} />
+          <div className="flex justify-end"><LocalDiagnosticsControls /></div>
         </header>
-      )}
 
       {errorMessage ? (
         <div className="mx-auto w-full max-w-3xl shrink-0 px-4 pt-2 sm:px-6">
@@ -218,6 +222,7 @@ function AgentChatSession({
         ) : null}
         <div className="w-full">{composer}</div>
       </div>
+      </section>
     </main>
   );
 }

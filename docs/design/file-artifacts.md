@@ -39,11 +39,11 @@ Agent fallback
   -> 前端固定 renderer 渲染 ChartCard
 ```
 
-`justbash` 仅提供虚拟 `/workspace`，不负责执行解析器。Eve authored tools 在应用 Node runtime 中运行，第三方解析库也在该 runtime 中加载；它们使用 sandbox 的 `readBinaryFile()` / `writeBinaryFile()` 访问虚拟文件。
+MicroSandbox 提供 Eve 管理的真实 Linux `/workspace`，不负责确定性 XLSX 解析。Eve authored tools 在应用 Node runtime 中运行，第三方解析库也在该 runtime 中加载；它们使用 sandbox 的 `readBinaryFile()` / `writeBinaryFile()` 访问 workspace 文件。
 
 浏览器和 Eve client event 不会得到内部 sandbox path；Eve 在模型步骤中使用 sandbox-resident attachment ref。受限 `glob` wrapper 在 tool 内枚举当前 sandbox 的 attachment paths，生成不透明 `attachmentId`，并在 Eve `defineState()` 保存 `attachmentId -> path` 映射；它的模型和 UI 输出都只含 ID、filename、format、size。`inspect_attachment` 只接受该 state 中的 ID。`tableId` 是 session 内不透明标识符，只能由 `inspect_attachment` 产生。为保持 POC 简单，工具使用同一 state 保存 `tableId` 索引和受上限保护的规范化 rows；后续查询工具不接受文件路径。`export_table` 的下载产物才写入 sandbox 的 `/workspace/derived/artifacts/`。`publish_derived_chart` 不产生或公开 sandbox path：它只接受 `/workspace/analysis/` 下的安全 CSV basename，并把已验证的 rows 直接作为 tool output 返回。会话结束后不保证这些标识符、派生数据或下载链接仍有效。
 
-实现依赖为 `csv-parse`、`exceljs`，以及前端选定的 React chart library。通用 `bash`、`read_file`、`write_file`、`grep` 可在 virtual workspace 内使用。默认 `glob` 仍替换为同名受限 wrapper：它在 authored tool 中固定枚举 `/workspace/attachments/*/*`，按实际 path 排序、最多返回 20 个支持的 CSV/XLSX 附件；模型输入是 `{}`，输出不含 path，且不得读取内容或列出 `/workspace/derived/**`。标准发现、解析、查询、导出和派生图表发布应使用本设计的四项 authored tools；当其不能表达用户需求时，主 Agent 可以在 sandbox 编写并验证 Bash/awk/jq/sqlite3/xan 脚本，并通过 `xlsx` 虚拟命令将 workbook 值导出为 JSON/CSV，但不得向用户暴露 sandbox path 或把当前 session 文件任务委派给默认子 Agent。
+实现依赖为 `csv-parse`、`exceljs`，以及前端选定的 React chart library。通用 `bash`、`read_file`、`write_file`、`grep` 可在 VM workspace 内使用。默认 `glob` 仍替换为同名受限 wrapper：它在 authored tool 中固定枚举 `/workspace/attachments/*/*`，按实际 path 排序、最多返回 20 个支持的 CSV/XLSX 附件；模型输入是 `{}`，输出不含 path，且不得读取内容或列出 `/workspace/derived/**`。标准发现、解析、查询、导出和派生图表发布应使用本设计的四项 authored tools；当其不能表达用户需求时，主 Agent 可以在 sandbox 编写并验证 Bash/Python 标准库脚本，但不得假定存在 `xlsx`、`xan` 或 shell `sqlite3` CLI，也不得向用户暴露 sandbox path 或把当前 session 文件任务委派给默认子 Agent。
 
 ## 端到端执行流
 
@@ -56,7 +56,7 @@ sequenceDiagram
   participant Eve as Eve runtime
   participant Agent as Agent harness
   participant LLM as LLM
-  participant Sandbox as just-bash workspace
+  participant Sandbox as MicroSandbox VM
   participant Tool as authored tool
 
   User->>UI: Send request and optional CSV/XLSX file
@@ -421,7 +421,7 @@ app/_components/download-file-card.tsx
 - 派生 chart：最多 50 行、20 列、64 KiB CSV；必须经 `publish_derived_chart` 验证，不接收 LLM 文本中的 rows。
 - 公式只使用已保存的 cached value，不做计算。加密、损坏或不能读取的 workbook 返回明确错误。
 
-大型文件、可靠下载 URL、跨 session 保留、租户隔离、审计和业务系统权限应由后续 host-owned artifact service 承担；不能以扩展 `justbash` 或把通用 filesystem/shell MCP 暴露给用户解决。
+大型文件、可靠下载 URL、跨 session 保留、租户隔离、审计和业务系统权限应由后续 host-owned artifact service 承担；不能以扩展 sandbox 或把通用 filesystem/shell MCP 暴露给用户解决。
 
 ## Concept Delta
 

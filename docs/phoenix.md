@@ -10,6 +10,14 @@
 npm run dev:phoenix
 ```
 
+Phoenix Python virtual environment 不放在项目目录，默认位置为
+`$XDG_CACHE_HOME/eve-chat-agent/phoenix-venv`（macOS/Linux 未设置
+`XDG_CACHE_HOME` 时为 `$HOME/.cache/eve-chat-agent/phoenix-venv`）。需要使用另一套环境时：
+
+```bash
+PHOENIX_VENV_DIR=/path/to/phoenix-venv npm run dev:phoenix
+```
+
 打开 [http://127.0.0.1:6006](http://127.0.0.1:6006)，选择 `eve-chat-agent` project。启动网页服务或执行一次 Eve eval 后，刷新 traces 页面即可查看调用链。
 
 本地配置由 `.env.local` 控制：

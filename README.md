@@ -23,6 +23,14 @@ OPENAI_API_MODE=responses
 `OPENAI_BASE_URL`、`OPENAI_API_KEY`、`OPENAI_MODEL` 和 `OPENAI_API_MODE` 都只由服务器进程读取；不要把 `.env.local` 提交到 Git。`OPENAI_API_MODE=chat` 使用 `/chat/completions`，适合 DeepSeek 等 Chat Completions-compatible 服务；`responses` 使用 `/responses`。然后启动：
 
 ```bash
+npm ci
+npm run setup:microsandbox
+npm run dev:eve
+```
+
+项目固定使用 `microsandbox@0.6.6`。Eve 0.24.x 的 peer 声明仍是 0.5.x，仓库 `.npmrc` 已配置 npm 使用 force 模式完成安装；`setup:microsandbox` 会把对应版本的 `msb` 和 `libkrunfw` 安装到用户的 `~/.microsandbox`，并在启动前校验版本。随后启动网页代理：
+
+```bash
 npm run dev
 ```
 

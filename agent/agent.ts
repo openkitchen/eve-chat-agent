@@ -14,7 +14,7 @@ if (apiMode !== "chat" && apiMode !== "responses") {
 
 export default defineAgent({
   build: {
-    externalDependencies: ["@mongodb-js/zstd", "just-bash"],
+    externalDependencies: ["@mongodb-js/zstd"],
   },
   model: apiMode === "chat" ? openai.chat(modelId) : openai.responses(modelId),
   modelContextWindowTokens: 128_000,

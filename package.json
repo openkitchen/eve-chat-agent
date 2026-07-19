@@ -14,11 +14,13 @@
     "start": "next start",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "build:eve": "eve build",
-    "dev:eve": "eve dev",
-    "start:eve": "eve start",
+    "dev:eve": "npm run setup:microsandbox && eve dev",
+    "start:eve": "npm run setup:microsandbox && eve start",
+    "setup:microsandbox": "node scripts/setup-microsandbox.mjs",
     "fixtures:file-artifacts": "node scripts/create-file-artifacts-fixtures.mjs",
     "test:file-artifacts": "vitest run lib/file-artifacts/core.test.ts agent/lib/file-artifacts-state.test.ts app/_components/file-artifact-renderer.test.tsx",
-    "test:programmable-sandbox": "vitest run agent/lib/programmable-justbash.test.ts"
+    "test:microsandbox": "vitest run agent/lib/microsandbox.test.ts",
+    "test:session-runtime-ui": "vitest run lib/local-diagnostics.test.ts app/_components/local-diagnostics-controls.test.tsx"
   },
   "dependencies": {
     "@ai-sdk/openai": "^4.0.16",
@@ -46,8 +48,8 @@
     "csv-parse": "^7.0.1",
     "eve": "^0.24.6",
     "exceljs": "^4.4.0",
-    "just-bash": "3.1.0",
     "lucide-react": "1.16.0",
+    "microsandbox": "0.6.6",
     "motion": "12.40.0",
     "nanoid": "5.1.11",
     "next": "16.3.0-preview.6",
@@ -69,7 +71,6 @@
     "@types/react": "19.2.15",
     "@types/react-dom": "19.2.3",
     "jsdom": "^29.1.1",
-    "microsandbox": "^0.5.10",
     "typescript": "6.0.3",
     "vitest": "^4.1.10"
   },
