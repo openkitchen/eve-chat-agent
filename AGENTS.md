@@ -6,6 +6,12 @@ from the installed eve package docs. In most installs, those docs are at
 installed `eve` package location first and read its `docs/` directory. If
 package docs are unavailable, use https://eve.dev/docs as a fallback.
 
+## Documentation language
+
+- Write architecture, design, and technical documentation in Chinese by default.
+- Use English for technical terms and key concept names in documentation.
+- Use fully English documentation only when explicitly requested.
+
 <!-- BEGIN:nextjs-agent-rules -->
 # This is NOT the Next.js you know
 
