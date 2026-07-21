@@ -11,7 +11,7 @@ export default defineEval({
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
     first.parked();
-    first.calledTool("glob");
+    first.calledTool("list_attachments");
     first.calledTool("inspect_attachment");
     first.notCalledTool("query_table");
     const request = t.requireInputRequest({ toolName: "ask_question" });

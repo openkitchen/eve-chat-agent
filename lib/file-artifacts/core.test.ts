@@ -3,7 +3,7 @@ import ExcelJS from "exceljs";
 import { describe, expect, it } from "vitest";
 import { FILE_ARTIFACT_LIMITS } from "./contracts";
 import type { StoredTableData } from "./core";
-import { exportStoredTable, parseAttachment, publishDerivedChart, queryStoredTable } from "./core";
+import { drawChart, exportStoredTable, materializeStoredTableCsv, parseAttachment, queryStoredTable } from "./core";
 
 const ids = () => {
   let count = 0;
@@ -33,11 +33,7 @@ describe("file artifact parsing", () => {
     ]);
 
     const table = toStoredTable(candidate);
-    const output = queryStoredTable(
-      table,
-      { columns: ["created_at", "amount"], limit: 50, type: "rows" },
-      { kind: "line", type: "chart", x: "created_at", y: "amount" },
-    );
+    const output = queryStoredTable(table, { columns: ["created_at", "amount"], limit: 50, type: "rows" });
     expect(output.ordering).toBe("source-row");
     expect(output.rows).toEqual([
       { amount: 120.5, created_at: "2026-01-01" },
@@ -49,11 +45,11 @@ describe("file artifact parsing", () => {
   it("discovers offset dense XLSX tables and keeps the source title in the range", async () => {
     const bytes = await readFile(new URL("../../test/fixtures/file-artifacts/report.xlsx", import.meta.url));
     const parsed = await parseAttachment(bytes, "report.xlsx", ids());
-    expect(parsed.candidates.map((table) => table.candidate.range)).toEqual(["B4:E9", "H4:K8"]);
+    expect(parsed.candidates.map((table) => table.candidate.range)).toEqual(["B4:E41", "H4:K8"]);
     expect(parsed.candidates.map((table) => table.candidate.headerRow)).toEqual([5, 5]);
-    expect(parsed.candidates.map((table) => table.candidate.rowCount)).toEqual([4, 3]);
+    expect(parsed.candidates.map((table) => table.candidate.rowCount)).toEqual([36, 3]);
     expect(parsed.warnings).toEqual([
-      "Report B4:E9: the first row was treated as a title; header row is 5.",
+      "Report B4:E41: the first row was treated as a title; header row is 5.",
       "Report H4:K8: the first row was treated as a title; header row is 5.",
     ]);
   });
@@ -88,20 +84,12 @@ describe("file artifact queries and exports", () => {
       ],
       table: { range: "A1:B4", sheetName: "CSV", tableId: "table_orders" },
     };
-    const grouped = queryStoredTable(
-      table,
-      { aggregate: { op: "sum", column: "amount" }, groupBy: "status", limit: 20, type: "group_by" },
-      { kind: "bar", type: "chart", x: "status", y: "value" },
-    );
+    const grouped = queryStoredTable(table, { aggregate: { op: "sum", column: "amount" }, groupBy: "status", limit: 20, type: "group_by" });
     expect(grouped.ordering).toBe("first-occurrence");
     expect(grouped.resultColumns).toEqual([{ name: "status", type: "string" }, { name: "value", type: "number" }]);
     expect(grouped.rows).toEqual([{ status: "open", value: 360 }, { status: "closed", value: 80 }]);
 
-    const histogram = queryStoredTable(
-      table,
-      { bins: 5, column: "amount", type: "histogram" },
-      { kind: "histogram", type: "chart", x: "amount" },
-    );
+    const histogram = queryStoredTable(table, { bins: 5, column: "amount", type: "histogram" });
     expect(histogram.ordering).toBe("ascending-bin");
     expect(histogram.rows).toHaveLength(5);
     expect(histogram.rows.reduce((total, bin) => total + Number(bin.count), 0)).toBe(3);
@@ -125,53 +113,34 @@ describe("file artifact queries and exports", () => {
     expect(() => exportStoredTable(tooLarge, { type: "rows" }, "csv")).toThrow("export_limit_exceeded");
   });
 
-  it("publishes a bounded, typed derived chart without exposing its sandbox filename", async () => {
+  it("materializes a table and draws a bounded multi-series chart", async () => {
     const sourceTable: StoredTableData = {
-      columns: [
-        { name: "created_at", type: "date" },
-        { name: "amount", type: "number" },
-      ],
-      rows: [{ amount: 120, created_at: "2026-01-01" }],
-      table: { range: "A1:B2", sheetName: "CSV", tableId: "table_orders" },
+      columns: [{ name: "month", type: "date" }, { name: "APAC", type: "number" }, { name: "EMEA", type: "number" }],
+      rows: [{ month: "2026-01", APAC: 120, EMEA: 100 }, { month: "2026-02", APAC: 150, EMEA: 110 }],
+      table: { range: "A1:C3", sheetName: "CSV", tableId: "table_orders" },
     };
-    const output = await publishDerivedChart(
-      new TextEncoder().encode("month,total_amount\n2026-01,7047.28\n2026-02,5689.43\n"),
-      sourceTable,
-      { kind: "line", title: "Monthly order amount", type: "chart", x: "month", y: "total_amount" },
-    );
+    const materialized = materializeStoredTableCsv(sourceTable);
+    expect(new TextDecoder().decode(materialized.bytes)).toBe("month,APAC,EMEA\n2026-01,120,100\n2026-02,150,110\n");
 
-    expect(output).toEqual({
-      provenance: {
-        kind: "sandbox-derived",
-        sourceTable: sourceTable.table,
-      },
-      resultColumns: [
-        { name: "month", type: "string" },
-        { name: "total_amount", type: "number" },
-      ],
-      resultCount: 2,
-      rows: [
-        { month: "2026-01", total_amount: 7047.28 },
-        { month: "2026-02", total_amount: 5689.43 },
-      ],
-      truncated: false,
-      view: { kind: "line", title: "Monthly order amount", type: "chart", x: "month", y: "total_amount" },
-    });
+    const output = await drawChart(materialized.bytes, {
+      renderer: "recharts-cartesian-v1",
+      chart: { type: "line" },
+      xAxis: { dataKey: "month" },
+      series: [{ type: "line", dataKey: "APAC" }, { type: "line", dataKey: "EMEA" }],
+    }, "materialized-table");
+
+    expect(output.provenance).toEqual({ kind: "materialized-table", rowCount: 2 });
+    expect(output.data).toEqual(sourceTable.rows);
   });
 
-  it("rejects an invalid derived chart before it can reach the UI", async () => {
-    const sourceTable: StoredTableData = {
-      columns: [],
-      rows: [],
-      table: { range: "A1", sheetName: "CSV", tableId: "table_orders" },
-    };
+  it("rejects an invalid chart before it can reach the UI", async () => {
     await expect(
-      publishDerivedChart(
+      drawChart(
         new TextEncoder().encode("month,total_amount\n2026-01,not-a-number\n"),
-        sourceTable,
-        { kind: "line", type: "chart", x: "month", y: "total_amount" },
+        { renderer: "recharts-cartesian-v1", chart: { type: "line" }, xAxis: { dataKey: "month" }, series: [{ type: "line", dataKey: "total_amount" }] },
+        "sandbox-derived",
       ),
-    ).rejects.toThrow("chart y column must be numeric");
+    ).rejects.toThrow("series column total_amount must be numeric");
   });
 });
 

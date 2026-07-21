@@ -1,25 +1,21 @@
 import { defineEval } from "eve/evals";
 
 export default defineEval({
-  description: "Lets the agent choose a suitable chart for an order-amount change analysis.",
+  description: "Builds one multi-series line chart from a chart-ready sandbox CSV.",
   tags: ["file-artifacts", "live"],
   timeoutMs: 90_000,
   async test(t) {
     await t.sendFile(
-      "Analyze how order amount changes over time in this CSV. Choose the most suitable visualization and use the file analysis tools.",
-      "test/fixtures/file-artifacts/orders.csv",
+      "Draw one line chart that compares APAC, EMEA, and LATAM revenue by month. Keep all three regions in the same chart and use the file analysis tools.",
+      "test/fixtures/file-artifacts/regional-revenue.csv",
       "text/csv",
     );
     t.succeeded();
-    t.toolOrder(["glob", "inspect_attachment", "query_table"]);
-    t.calledTool("glob");
+    t.toolOrder(["list_attachments", "inspect_attachment", "materialize_table", "draw_chart"]);
+    t.calledTool("list_attachments");
     t.calledTool("inspect_attachment");
     t.notCalledTool("ask_question");
-    t.calledTool("query_table", {
-      input: {
-        query: { type: "rows" },
-        view: { kind: "line" },
-      },
-    });
+    t.calledTool("materialize_table");
+    t.calledTool("draw_chart");
   },
 });

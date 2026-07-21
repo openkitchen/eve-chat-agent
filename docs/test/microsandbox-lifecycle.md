@@ -25,7 +25,7 @@
 
 1. 从浏览器上传 `test/fixtures/file-artifacts/monthly-orders.csv`。
 2. 发送“按月汇总金额并画折线图”，不指定实现方法。
-3. 断言 Agent 在当前 `/workspace/analysis/` 写入并执行可退出的 Python 或 Bash 脚本，检查生成的 `month,total_amount` CSV，再调用 `publish_derived_chart`。
+3. 断言 Agent 先调用 `materialize_table`，再在当前 `/workspace/analysis/` 写入并执行可退出的 Python 或 Bash 脚本，检查生成的 `month,total_amount` CSV，最后调用 `draw_chart`。
 4. 断言 chart rows 是聚合后的 2 行数据，页面显示真实 line chart，而不是 Markdown/ASCII 模拟图。
 
 ### 3. workspace 跨 turn

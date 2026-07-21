@@ -2,12 +2,12 @@
 
 import { DownloadIcon, FileDownIcon } from "lucide-react";
 import type { z } from "zod";
-import { type exportTableOutputSchema } from "@/lib/file-artifacts/contracts";
+import { type downloadTableOutputSchema } from "@/lib/file-artifacts/contracts";
 import { Button } from "@/components/ui/button";
 
-type ExportOutput = z.infer<typeof exportTableOutputSchema>;
+type DownloadOutput = z.infer<typeof downloadTableOutputSchema>;
 
-export function DownloadFileCard({ output }: { readonly output: ExportOutput }) {
+export function DownloadFileCard({ output }: { readonly output: DownloadOutput }) {
   return (
     <section className="flex flex-wrap items-center justify-between gap-3 border-t pt-3">
       <div className="flex min-w-0 items-center gap-2">

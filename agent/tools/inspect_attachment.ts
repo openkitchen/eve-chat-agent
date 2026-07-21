@@ -5,13 +5,13 @@ import { parseAttachment } from "../../lib/file-artifacts/core";
 import { assertFileArtifactsCapacity, fileArtifactsState } from "../lib/file-artifacts-state";
 
 export default defineTool({
-  description: "Inspect one CSV or XLSX attachment discovered by glob. Returns deterministic table candidates, schemas, samples, and profiles.",
+  description: "Inspect one CSV or XLSX attachment discovered by list_attachments. Returns deterministic table candidates, schemas, samples, and profiles.",
   inputSchema: inspectAttachmentInputSchema,
   outputSchema: inspectAttachmentOutputSchema,
   async execute({ attachmentId }, ctx) {
     const attachment = fileArtifactsState.get().attachments[attachmentId];
     if (!attachment) {
-      throw new Error("Unknown attachmentId. Call glob and use one returned by this session.");
+      throw new Error("Unknown attachmentId. Call list_attachments and use one returned by this session.");
     }
     if (attachment.size > FILE_ARTIFACT_LIMITS.fileBytesMax) {
       throw new Error("Attachment exceeds the 10 MiB POC limit.");

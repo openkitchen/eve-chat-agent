@@ -40,7 +40,7 @@ Eve creates a durable session from the first message and returns a `continuation
 - This POC fixes `cpus: 1`, `memoryMiB: 1024`, and `networkPolicy: "deny-all"`. There is no Docker dependency and no online package installation during bootstrap.
 - Eve owns VM creation and shutdown. The UI does not start, stop, or delete VM processes. The runtime-status dialog reads Eve inspection data and a best-effort MicroSandbox metrics snapshot.
 
-The standard `bash`, `read_file`, `write_file`, and `grep` tools are available to the root agent. The restricted `glob` wrapper remains in place for the deterministic attachment tool flow. The authoritative lifecycle constraints and current restart-recovery limitation are in `docs/design/microsandbox-lifecycle.md`.
+The standard `bash`, `read_file`, `write_file`, and `grep` tools are available to the root agent. The framework `glob` tool is disabled; `list_attachments` is the only deterministic attachment-discovery capability. The authoritative lifecycle constraints and current restart-recovery limitation are in `docs/design/microsandbox-lifecycle.md`.
 
 The chat UI sends browser uploads as Eve file parts. Eve validates the default upload policy (25 MB, all media types), stages byte-backed uploads under `/workspace/attachments`, and gives the model a sandbox reference. The agent can inspect text-like files with its built-in file tools. This is suitable for exploration and simple text/CSV work. Deterministic CSV/XLSX discovery and querying are handled by authored tools in the application runtime, rather than by assuming an arbitrary XLSX CLI exists in the VM.
 

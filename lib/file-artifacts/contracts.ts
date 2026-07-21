@@ -74,17 +74,6 @@ export const tableQuerySchema = z.discriminatedUnion("type", [
   histogramQuerySchema,
 ]);
 
-export const dataViewSchema = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("table"), title: z.string().max(120).optional() }),
-  z.object({
-    type: z.literal("chart"),
-    kind: z.enum(["line", "bar", "histogram"]),
-    title: z.string().max(120).optional(),
-    x: z.string().min(1),
-    y: z.string().min(1).optional(),
-  }),
-]);
-
 export const attachmentRefSchema = z.object({
   attachmentId: z.string().min(1),
   filename: z.string().min(1),
@@ -120,7 +109,6 @@ export const inspectAttachmentOutputSchema = z.object({
 export const queryTableInputSchema = z.object({
   tableId: z.string().min(1),
   query: tableQuerySchema,
-  view: dataViewSchema.optional(),
 });
 export const queryTableOutputSchema = z.object({
   table: tableRefSchema,
@@ -131,20 +119,19 @@ export const queryTableOutputSchema = z.object({
   resultCount: z.number().int().nonnegative(),
   truncated: z.boolean(),
   ordering: z.enum(["source-row", "first-occurrence", "ascending-bin"]),
-  view: dataViewSchema.optional(),
 });
 
 export const exportQuerySchema = z.discriminatedUnion("type", [
   rowsQuerySchema.omit({ limit: true }),
   groupByQuerySchema.omit({ limit: true }),
 ]);
-export const exportTableInputSchema = z.object({
+export const downloadTableInputSchema = z.object({
   tableId: z.string().min(1),
   query: exportQuerySchema,
   format: z.enum(["csv", "json"]),
   filename: z.string().max(100).optional(),
 });
-export const exportTableOutputSchema = z.object({
+export const downloadTableOutputSchema = z.object({
   table: tableRefSchema,
   filename: z.string().min(1),
   mediaType: z.enum(["text/csv", "application/json"]),
@@ -152,45 +139,82 @@ export const exportTableOutputSchema = z.object({
   dataUrl: z.string().startsWith("data:"),
 });
 
-const safeAnalysisFilenameSchema = z
+const safeAnalysisCsvPathSchema = z
   .string()
-  .min(5)
-  .max(100)
-  .regex(/^[a-zA-Z0-9][a-zA-Z0-9._-]*\.csv$/, "analysisFile must be a safe CSV basename.")
-  .refine((filename) => !filename.includes(".."), "analysisFile must not contain traversal segments.");
+  .min("/workspace/analysis/".length + 5)
+  .max(240)
+  .regex(/^\/workspace\/analysis\/[a-zA-Z0-9][a-zA-Z0-9._/-]*\.csv$/, "path must be a safe CSV path under /workspace/analysis/.")
+  .refine((path) => !path.includes(".."), "path must not contain traversal segments.");
 
-export const derivedChartViewSchema = z.object({
-  type: z.literal("chart"),
-  kind: z.enum(["line", "bar"]),
-  title: z.string().max(120).optional(),
-  x: z.string().min(1),
-  y: z.string().min(1),
+export const dataRefSchema = z.object({
+  path: safeAnalysisCsvPathSchema,
+  format: z.literal("csv"),
+  schema: z.array(columnSchema).min(1).max(FILE_ARTIFACT_LIMITS.sourceColumnsMax),
 });
 
-export const publishDerivedChartInputSchema = z.object({
-  analysisFile: safeAnalysisFilenameSchema,
-  sourceTableId: z.string().min(1),
-  view: derivedChartViewSchema,
+export const materializeTableInputSchema = z.object({ tableId: z.string().min(1) });
+export const materializeTableOutputSchema = dataRefSchema;
+
+const axisSchema = z.object({
+  dataKey: z.string().min(1),
+  type: z.enum(["category", "number"]).optional(),
+  label: z.string().max(120).optional(),
+  interval: z.enum(["auto", "preserveStartEnd"]).optional(),
 });
 
-export const publishDerivedChartOutputSchema = z.object({
-  provenance: z.object({
-    kind: z.literal("sandbox-derived"),
-    sourceTable: tableRefSchema,
+const yAxisSchema = z.object({
+  id: z.enum(["left", "right"]),
+  label: z.string().max(120).optional(),
+  scale: z.enum(["linear", "log"]).optional(),
+  domain: z.union([z.literal("auto"), z.literal("zeroToDataMax"), z.tuple([z.number(), z.number()])]).optional(),
+});
+
+const chartSeriesSchema = z.object({
+  type: z.enum(["line", "bar"]),
+  dataKey: z.string().min(1),
+  name: z.string().max(120).optional(),
+  yAxisId: z.enum(["left", "right"]).optional(),
+  stackId: z.string().min(1).max(80).optional(),
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "color must be a hex color.").optional(),
+  strokeWidth: z.union([z.literal(1), z.literal(2), z.literal(3)]).optional(),
+  dot: z.boolean().optional(),
+});
+
+export const rechartsCartesianSpecSchema = z.object({
+  renderer: z.literal("recharts-cartesian-v1"),
+  title: z.string().min(1).max(120).optional(),
+  chart: z.object({
+    type: z.enum(["line", "bar"]),
+    margin: z.object({ top: z.number().int().min(0).max(64).optional(), right: z.number().int().min(0).max(64).optional(), bottom: z.number().int().min(0).max(64).optional(), left: z.number().int().min(0).max(64).optional() }).optional(),
   }),
-  resultColumns: z.array(columnSchema).min(2).max(FILE_ARTIFACT_LIMITS.derivedChartColumnsMax),
-  rows: z.array(rowSchema).max(FILE_ARTIFACT_LIMITS.derivedChartRowsMax),
-  resultCount: z.number().int().nonnegative().max(FILE_ARTIFACT_LIMITS.derivedChartRowsMax),
-  truncated: z.literal(false),
-  view: derivedChartViewSchema,
+  xAxis: axisSchema,
+  yAxes: z.array(yAxisSchema).min(1).max(2).optional(),
+  series: z.array(chartSeriesSchema).min(1).max(12),
+  grid: z.object({ show: z.boolean() }).optional(),
+  legend: z.object({ show: z.boolean(), verticalAlign: z.enum(["top", "bottom"]).optional() }).optional(),
+  tooltip: z.object({ show: z.boolean(), shared: z.boolean().optional() }).optional(),
+});
+
+export const drawChartInputSchema = z.object({
+  source: dataRefSchema,
+  spec: rechartsCartesianSpecSchema,
+});
+
+export const drawChartOutputSchema = z.object({
+  data: z.array(rowSchema).max(FILE_ARTIFACT_LIMITS.derivedChartRowsMax),
+  spec: rechartsCartesianSpecSchema,
+  provenance: z.object({
+    kind: z.enum(["sandbox-derived", "materialized-table"]),
+    rowCount: z.number().int().nonnegative().max(FILE_ARTIFACT_LIMITS.derivedChartRowsMax),
+  }),
 });
 
 export type AttachmentRef = z.infer<typeof attachmentRefSchema>;
 export type Column = z.infer<typeof columnSchema>;
-export type DataView = z.infer<typeof dataViewSchema>;
-export type DerivedChartView = z.infer<typeof derivedChartViewSchema>;
+export type DataRef = z.infer<typeof dataRefSchema>;
+export type DownloadTableInput = z.infer<typeof downloadTableInputSchema>;
 export type ExportQuery = z.infer<typeof exportQuerySchema>;
-export type PublishDerivedChartInput = z.infer<typeof publishDerivedChartInputSchema>;
+export type RechartsCartesianSpec = z.infer<typeof rechartsCartesianSpecSchema>;
 export type QueryTableInput = z.infer<typeof queryTableInputSchema>;
 export type Scalar = z.infer<typeof scalarSchema>;
 export type TableCandidate = z.infer<typeof tableCandidateSchema>;

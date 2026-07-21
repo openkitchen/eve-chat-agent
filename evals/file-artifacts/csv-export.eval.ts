@@ -1,7 +1,7 @@
 import { defineEval } from "eve/evals";
 
 export default defineEval({
-  description: "Exports filtered CSV data without exposing its data URL to the model.",
+  description: "Creates a filtered CSV download only for an explicit user download request.",
   tags: ["file-artifacts", "live"],
   timeoutMs: 90_000,
   async test(t) {
@@ -11,9 +11,9 @@ export default defineEval({
       "text/csv",
     );
     t.succeeded();
-    t.toolOrder(["glob", "inspect_attachment", "export_table"]);
+    t.toolOrder(["list_attachments", "inspect_attachment", "download_table"]);
     t.notCalledTool("ask_question");
-    t.calledTool("export_table", {
+    t.calledTool("download_table", {
       input: {
         format: "csv",
         query: { filter: { column: "status", equals: "open" }, type: "rows" },

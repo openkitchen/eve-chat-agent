@@ -3,9 +3,8 @@ import ExcelJS from "exceljs";
 import {
   FILE_ARTIFACT_LIMITS,
   type Column,
-  type DataView,
-  type DerivedChartView,
   type ExportQuery,
+  type RechartsCartesianSpec,
   type Scalar,
   type TableCandidate,
   type TableQuery,
@@ -145,9 +144,8 @@ function assertTableWithinLimits(table: ParsedTable) {
   }
 }
 
-export function queryStoredTable(table: StoredTableData, query: TableQuery, view?: DataView) {
+export function queryStoredTable(table: StoredTableData, query: TableQuery) {
   const result = runQuery(table, query);
-  validateView(table, query, view, result.resultColumns);
   return {
     ordering: result.ordering,
     query,
@@ -157,7 +155,6 @@ export function queryStoredTable(table: StoredTableData, query: TableQuery, view
     sourceMatchedCount: result.sourceMatchedCount,
     table: table.table,
     truncated: result.truncated,
-    ...(view ? { view } : {}),
   };
 }
 
@@ -177,10 +174,18 @@ export function exportStoredTable(table: StoredTableData, query: ExportQuery, fo
   return { bytes, filename, mediaType, rowCount: result.rows.length };
 }
 
-export async function publishDerivedChart(
+export function materializeStoredTableCsv(table: StoredTableData) {
+  return {
+    bytes: new TextEncoder().encode(toCsv(table.rows, table.columns)),
+    columns: table.columns,
+    rowCount: table.rows.length,
+  };
+}
+
+export async function drawChart(
   bytes: Uint8Array,
-  sourceTable: StoredTableData,
-  view: DerivedChartView,
+  spec: RechartsCartesianSpec,
+  provenanceKind: "sandbox-derived" | "materialized-table",
 ) {
   if (bytes.byteLength > FILE_ARTIFACT_LIMITS.derivedChartBytesMax) {
     throw new Error("derived_chart_limit_exceeded: analysis CSV exceeds 64 KiB.");
@@ -196,17 +201,11 @@ export async function publishDerivedChart(
   if (derivedTable.candidate.columns.length > FILE_ARTIFACT_LIMITS.derivedChartColumnsMax) {
     throw new Error("derived_chart_limit_exceeded: analysis CSV exceeds 20 columns.");
   }
-  validateDerivedChartView(derivedTable.candidate.columns, view);
+  validateDrawChartSpec(derivedTable.candidate.columns, spec);
   return {
-    provenance: {
-      kind: "sandbox-derived" as const,
-      sourceTable: sourceTable.table,
-    },
-    resultColumns: derivedTable.candidate.columns,
-    resultCount: derivedTable.rows.length,
-    rows: derivedTable.rows,
-    truncated: false as const,
-    view,
+    data: derivedTable.rows,
+    provenance: { kind: provenanceKind, rowCount: derivedTable.rows.length },
+    spec,
   };
 }
 
@@ -535,43 +534,25 @@ function requireColumn(table: StoredTableData, name: string): Column {
   return column;
 }
 
-function validateView(table: StoredTableData, query: TableQuery, view: DataView | undefined, resultColumns: Column[]) {
-  if (!view || view.type === "table") {
-    return;
+function validateDrawChartSpec(columns: Column[], spec: RechartsCartesianSpec) {
+  if (spec.series.some((series) => series.type !== spec.chart.type)) {
+    throw new Error("draw_chart_invalid: every series type must match the chart type in recharts-cartesian-v1.");
   }
-  if (view.kind === "line") {
-    const x = requireColumn(table, view.x);
-    const y = requireColumn(table, view.y ?? "");
-    if (query.type !== "rows" || x.type !== "date" || y.type !== "number" || !resultColumns.some((column) => column.name === x.name) || !resultColumns.some((column) => column.name === y.name)) {
-      throw new Error("Line charts require a rows query containing a date x column and numeric y column.");
-    }
-    return;
-  }
-  if (view.kind === "bar") {
-    if (query.type !== "group_by" || view.x !== query.groupBy || view.y !== "value") {
-      throw new Error("Bar charts require a matching group_by query with y = value.");
-    }
-    return;
-  }
-  if (query.type !== "histogram" || view.x !== query.column || view.y !== undefined) {
-    throw new Error("Histogram charts require a matching histogram query without y.");
-  }
-}
-
-function validateDerivedChartView(columns: Column[], view: DerivedChartView) {
-  const x = columns.find((column) => column.name === view.x);
-  const y = columns.find((column) => column.name === view.y);
+  const x = columns.find((column) => column.name === spec.xAxis.dataKey);
   if (!x) {
-    throw new Error(`derived_chart_invalid: unknown x column ${view.x}.`);
+    throw new Error(`draw_chart_invalid: unknown x column ${spec.xAxis.dataKey}.`);
   }
-  if (!y) {
-    throw new Error(`derived_chart_invalid: unknown y column ${view.y}.`);
+  if (x.type === "boolean" || x.type === "mixed") {
+    throw new Error("draw_chart_invalid: x axis column must be string, date, or number.");
   }
-  if (x.type !== "string" && x.type !== "date") {
-    throw new Error("derived_chart_invalid: chart x column must be string or date.");
-  }
-  if (y.type !== "number") {
-    throw new Error("derived_chart_invalid: chart y column must be numeric.");
+  for (const series of spec.series) {
+    const column = columns.find((candidate) => candidate.name === series.dataKey);
+    if (!column) {
+      throw new Error(`draw_chart_invalid: unknown series column ${series.dataKey}.`);
+    }
+    if (column.type !== "number") {
+      throw new Error(`draw_chart_invalid: series column ${series.dataKey} must be numeric.`);
+    }
   }
 }
 
