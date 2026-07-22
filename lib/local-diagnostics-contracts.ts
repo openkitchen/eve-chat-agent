@@ -1,5 +1,6 @@
 export type LocalSessionSummary = {
   readonly sessionId: string;
+  readonly title?: string;
   readonly updatedAt: string;
 };
 

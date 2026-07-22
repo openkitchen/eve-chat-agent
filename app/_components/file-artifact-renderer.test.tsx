@@ -36,13 +36,14 @@ describe("FileArtifactRenderer", () => {
     expect(container.innerHTML).toBe("");
   });
 
-  it("opens a completed UI artifact tool by default", () => {
+  it("keeps draw_chart details collapsed while the chart stays visible", () => {
     const message = { id: "message_1", parts: [drawPart()], role: "assistant" } as EveMessage;
-    render(<AgentMessage canRespond={false} isStreaming={false} message={message} onInputResponses={() => undefined} />);
-    expect(screen.getByRole("button", { name: /draw_chart/i }).getAttribute("data-state")).toBe("open");
+    const { container } = render(<AgentMessage canRespond={false} isStreaming={false} message={message} onInputResponses={() => undefined} />);
+    expect(within(container).getByRole("img", { name: "Regional revenue" })).toBeTruthy();
+    expect(within(container).getByRole("button", { name: /draw_chart/i }).getAttribute("data-state")).toBe("closed");
   });
 
-  it("opens a draw_chart artifact when the output becomes available", async () => {
+  it("keeps draw_chart details collapsed when the output becomes available", async () => {
     const pendingMessage = { id: "message_2", parts: [{ ...drawPart(), output: undefined, state: "input-available" }], role: "assistant" } as EveMessage;
     const { container, rerender } = render(
       <AgentMessage canRespond={false} isStreaming message={pendingMessage} onInputResponses={() => undefined} />,
@@ -51,7 +52,7 @@ describe("FileArtifactRenderer", () => {
     expect(toolButton().getAttribute("data-state")).toBe("closed");
 
     rerender(<AgentMessage canRespond isStreaming={false} message={{ ...pendingMessage, parts: [drawPart()] }} onInputResponses={() => undefined} />);
-    await waitFor(() => expect(toolButton().getAttribute("data-state")).toBe("open"));
+    await waitFor(() => expect(toolButton().getAttribute("data-state")).toBe("closed"));
   });
 });
 

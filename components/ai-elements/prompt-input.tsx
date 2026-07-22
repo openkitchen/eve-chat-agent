@@ -33,7 +33,8 @@ import { Spinner } from "@/components/ui/spinner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type { ChatStatus, FileUIPart, SourceDocumentUIPart } from "ai";
-import { ArrowUpIcon, ImageIcon, Monitor, PlusIcon, SquareIcon, XIcon } from "lucide-react";
+import { ImageIcon, Monitor, PlusIcon, XIcon } from "lucide-react";
+import { DevAssistSendIcon, DevAssistStopIcon } from "@/components/icons/dev-assist-icons";
 import { nanoid } from "nanoid";
 import type {
   ChangeEvent,
@@ -1140,12 +1141,12 @@ export const PromptInputSubmit = ({
 }: PromptInputSubmitProps) => {
   const isGenerating = status === "submitted" || status === "streaming";
 
-  let Icon = <ArrowUpIcon className="size-4" />;
+  let Icon = <DevAssistSendIcon className="size-4" />;
 
   if (status === "submitted") {
     Icon = <Spinner />;
   } else if (status === "streaming") {
-    Icon = <SquareIcon className="size-4" />;
+    Icon = <DevAssistStopIcon className="size-4" />;
   } else if (status === "error") {
     Icon = <XIcon className="size-4" />;
   }

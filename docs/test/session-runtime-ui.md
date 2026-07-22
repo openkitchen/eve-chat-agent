@@ -16,10 +16,11 @@
 ### 1. 历史 session 列表和恢复
 
 1. 请求 `GET /api/local/sessions`。
-2. 断言 response 只有 `sessionId`、`updatedAt`、`source`、`truncated`；session ID 均匹配 `wrun_...`，按 `updatedAt` 倒序，最多 50 条。
-3. 打开 Web UI 的 history dialog，断言显示同一批简短 session ID 与本地更新时间，不显示用户消息、assistant 回复、continuation token、sandbox path 或 `.eve` 文件路径。
-4. 点击一个已知可恢复项。
-5. 断言 URL 为 `/?session_id=<id>`，随后现有 Eve stream replay 恢复历史消息；发送一条 follow-up，断言它继续同一个 session，而不是新建 session。
+2. 断言 response 只有 `sessionId`、可选 `title`、`updatedAt`、`source`、`truncated`；session ID 均匹配 `wrun_...`，按 `updatedAt` 倒序，最多 50 条。
+3. 新 session 的 `message.received` hook 必须在模型调用前写入 `.eve/local-session-titles/<sessionId>.json` 的 generic fallback title；fallback 不得包含用户消息。`set_session_title` 可替换 fallback 一次；后续调用不得覆盖生成的语义标题。旧的仅含 `title` 的 metadata 仍按既有语义标题处理。
+4. 打开 Web UI 的 history sidebar，断言显示 title 与本地更新时间；旧 session 无 title 时显示 `Untitled chat`。不得显示用户消息、assistant 回复、continuation token、sandbox path 或 `.eve` 文件路径。
+5. 点击一个已知可恢复项。
+6. 断言 URL 为 `/?session_id=<id>`，随后现有 Eve stream replay 恢复历史消息；发送一条 follow-up，断言它继续同一个 session，而不是新建 session。
 
 ### 2. 运行时状态快照
 
@@ -41,7 +42,7 @@
 
 为 route helper 添加单元测试，使用临时目录和 mock client：
 
-- session scanner 仅接受 regular `wrun_*.json`、拒绝 symlink/其他文件、按 mtime 排序、限制 50 条、目录缺失返回空；
+- session scanner 仅接受 regular `wrun_*.json`、拒绝 symlink/其他文件、按 mtime 排序、限制 50 条、目录缺失返回空；标题 metadata 只接受同 session ID 的 plain JSON，并验证 fallback 首次写入、语义标题替换与后续不可覆盖；
 - runtime projection 对 `/eve/v1/info` 和 `allSandboxMetrics()` 的成功、不可达、无效 payload 和 prefix 不匹配分别生成定义中的 response；
 - response serialization 不含 continuation token、message、prompt、命令、environment、workspace path；
 - dialog component 测试确认 lazy fetch、loading/error/empty state、恢复链接和 refresh 行为。
@@ -57,7 +58,7 @@ npm run build:eve
 
 ## 浏览器验证
 
-用 Chrome 对第 1、2 节执行一次真实验证：从 history dialog 打开旧 session，发送 follow-up；打开 runtime dialog，记录 VM 数与一项 metrics，点击 refresh 后确认生成时间更新。检查浏览器 console 没有 hydration mismatch，network 中没有从 browser 直接访问 `.eve` 或 `~/.microsandbox`。
+用 Chrome 对第 1、2 节执行一次真实验证：发送一条新消息并确认首轮开始后 sidebar 出现 generic fallback 或模型生成 title；从 sidebar 打开旧 session，发送 follow-up；打开 runtime dialog，记录 VM 数与一项 metrics，点击 refresh 后确认生成时间更新。检查浏览器 console 没有 hydration mismatch，network 中没有从 browser 直接访问 `.eve` 或 `~/.microsandbox`。
 
 ## 非目标
 

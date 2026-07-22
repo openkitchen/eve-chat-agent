@@ -118,35 +118,39 @@ function DynamicToolMessagePart({
   readonly part: EveDynamicToolPart;
 }) {
   const rendersFileArtifact = hasFileArtifactRenderer(part);
+  const rendersChartArtifact = part.toolName === "draw_chart" && rendersFileArtifact;
   const [open, setOpen] = useState(
-    rendersFileArtifact || part.state === "approval-requested" || part.state === "approval-responded",
+    !rendersChartArtifact && (rendersFileArtifact || part.state === "approval-requested" || part.state === "approval-responded"),
   );
 
   useEffect(() => {
-    if (rendersFileArtifact) {
+    if (rendersFileArtifact && !rendersChartArtifact) {
       setOpen(true);
     }
-  }, [rendersFileArtifact]);
+  }, [rendersChartArtifact, rendersFileArtifact]);
 
   return (
-    <Tool onOpenChange={setOpen} open={open}>
-      <ToolHeader
-        state={part.state}
-        title={part.toolName}
-        toolName={part.toolName}
-        type="dynamic-tool"
-      />
-      <ToolContent>
-        <ToolInput input={part.input} />
-        <InputRequestActions
-          canRespond={canRespond}
-          part={part}
-          onInputResponses={onInputResponses}
+    <div className="space-y-2">
+      {rendersChartArtifact ? <FileArtifactRenderer part={part} /> : null}
+      <Tool onOpenChange={setOpen} open={open}>
+        <ToolHeader
+          state={part.state}
+          title={part.toolName}
+          toolName={part.toolName}
+          type="dynamic-tool"
         />
-        <FileArtifactRenderer part={part} />
-        {rendersFileArtifact ? null : <ToolOutput errorText={part.errorText} output={part.output} />}
-      </ToolContent>
-    </Tool>
+        <ToolContent>
+          <ToolInput input={part.input} />
+          <InputRequestActions
+            canRespond={canRespond}
+            part={part}
+            onInputResponses={onInputResponses}
+          />
+          {rendersChartArtifact ? null : <FileArtifactRenderer part={part} />}
+          {rendersFileArtifact ? null : <ToolOutput errorText={part.errorText} output={part.output} />}
+        </ToolContent>
+      </Tool>
+    </div>
   );
 }
 

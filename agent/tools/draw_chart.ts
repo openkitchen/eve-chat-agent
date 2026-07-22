@@ -3,7 +3,7 @@ import { drawChartInputSchema, drawChartOutputSchema } from "../../lib/file-arti
 import { drawChart } from "../../lib/file-artifacts/core";
 
 export default defineTool({
-  description: "Render a user-requested Recharts Cartesian chart from a validated CSV under /workspace/analysis. The CSV must already have the columns needed by the renderer; use Python to prepare it when necessary.",
+  description: "Render a supported Recharts Cartesian line or bar chart from a validated CSV under /workspace/analysis. Pie, donut, area, scatter, radar, and mixed charts are not supported. The CSV must already have the columns needed by the renderer; use Python only to prepare data for a supported chart.",
   inputSchema: drawChartInputSchema,
   outputSchema: drawChartOutputSchema,
   async execute({ source, spec }, ctx) {

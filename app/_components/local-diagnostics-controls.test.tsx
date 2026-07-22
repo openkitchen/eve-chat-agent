@@ -8,7 +8,7 @@ import { LocalDiagnosticsControls, LocalSessionSidebar } from "./local-diagnosti
 describe("LocalDiagnosticsControls", () => {
   it("renders local sessions in the left sidebar and filters them", async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({
-      sessions: [{ sessionId: "wrun_01KXV0C35TRVNV8BPN8XZG96TD", updatedAt: "2026-07-19T01:02:03.000Z" }],
+      sessions: [{ sessionId: "wrun_01KXV0C35TRVNV8BPN8XZG96TD", title: "Monthly revenue analysis", updatedAt: "2026-07-19T01:02:03.000Z" }],
       source: "eve-local-run-manifests",
       truncated: false,
     }));
@@ -18,7 +18,7 @@ describe("LocalDiagnosticsControls", () => {
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith("/api/local/sessions", { cache: "no-store" });
     });
-    expect(await screen.findByText("wrun_01KXV0C35...PN8XZG96TD")).toBeTruthy();
+    expect(await screen.findByText("Monthly revenue analysis")).toBeTruthy();
     expect(screen.queryByText("continuationToken")).toBeNull();
 
     fireEvent.change(screen.getByRole("searchbox", { name: "Search chats" }), { target: { value: "does-not-match" } });

@@ -1,6 +1,6 @@
 "use client";
 
-import { ActivityIcon, ChevronLeftIcon, ChevronRightIcon, PlusIcon, RefreshCwIcon, SearchIcon } from "lucide-react";
+import { ActivityIcon, RefreshCwIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { LocalRuntimeResponse, LocalSessionsResponse } from "@/lib/local-diagnostics-contracts";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,11 @@ import {
 } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import {
+  DevAssistNewChatIcon,
+  DevAssistSearchIcon,
+  DevAssistSidebarIcon,
+} from "@/components/icons/dev-assist-icons";
 
 export function LocalDiagnosticsControls() {
   return (
@@ -23,7 +28,7 @@ export function LocalDiagnosticsControls() {
   );
 }
 
-export function LocalSessionSidebar({ currentSessionId }: { readonly currentSessionId?: string }) {
+export function LocalSessionSidebar({ currentSessionId, refreshKey }: { readonly currentSessionId?: string; readonly refreshKey?: number }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchText, setSearchText] = useState("");
@@ -45,23 +50,23 @@ export function LocalSessionSidebar({ currentSessionId }: { readonly currentSess
     return () => {
       cancelled = true;
     };
-  }, [currentSessionId]);
+  }, [currentSessionId, refreshKey]);
 
   const sessions = state.status === "ready"
-    ? state.data.sessions.filter((session) => session.sessionId.toLowerCase().includes(searchText.trim().toLowerCase()))
+    ? state.data.sessions.filter((session) => `${session.title ?? ""} ${session.sessionId}`.toLowerCase().includes(searchText.trim().toLowerCase()))
     : [];
 
   return (
     <>
       <Button
         aria-label={mobileOpen ? "Close local session history" : "Open local session history"}
-        className="fixed top-3 left-3 z-50 md:hidden"
+        className="fixed top-3 left-3 z-50 rounded-xl border-black/[.08] bg-white shadow-sm md:hidden"
         onClick={() => setMobileOpen((open) => !open)}
         size="icon-sm"
         type="button"
         variant="outline"
       >
-        {mobileOpen ? <ChevronLeftIcon className="size-4" /> : <ChevronRightIcon className="size-4" />}
+        <DevAssistSidebarIcon className="size-5 text-black/70" />
       </Button>
       {mobileOpen ? (
         <button
@@ -74,41 +79,41 @@ export function LocalSessionSidebar({ currentSessionId }: { readonly currentSess
       <aside
         aria-label="Local session history"
         className={cn(
-          "fixed inset-y-0 left-0 z-40 flex w-72 shrink-0 flex-col border-r bg-background transition-transform duration-200 md:relative md:inset-auto md:z-auto md:translate-x-0 md:transition-[width]",
+          "fixed inset-y-0 left-0 z-40 flex w-[260px] shrink-0 flex-col border-r border-black/[.06] bg-white px-1.5 py-2.5 transition-transform duration-200 md:relative md:inset-auto md:z-auto md:translate-x-0 md:transition-[width]",
           mobileOpen ? "translate-x-0" : "-translate-x-full",
-          collapsed ? "md:w-14" : "md:w-64",
+          collapsed ? "md:w-[52px] md:px-1.5 md:pt-3.5" : "md:w-[260px]",
         )}
       >
-        <div className="flex h-14 items-center justify-between gap-2 border-b px-3">
+        <div className={cn("flex h-9 items-center justify-between gap-2 px-1.5", collapsed && "md:flex-col md:justify-start md:gap-[18px] md:px-0")}>
           <div className={cn("flex min-w-0 items-center gap-2", collapsed && "md:hidden")}>
-            <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-foreground font-semibold text-background text-xs">EV</div>
-            <span className="truncate font-medium text-sm">eve-chat-agent</span>
+            <div className="flex size-7 shrink-0 items-center justify-center font-bold text-[10px] text-black">EV</div>
+            <span className="truncate text-sm font-semibold">eve-chat-agent</span>
           </div>
           <Button
             aria-label={collapsed ? "Expand session history" : "Collapse session history"}
-            className={cn(collapsed && "md:mx-auto")}
+            className={cn("size-9 rounded-xl text-black/70 hover:bg-black/[.06]", collapsed && "md:mx-auto")}
             onClick={() => setCollapsed((open) => !open)}
             size="icon-sm"
             type="button"
             variant="ghost"
           >
-            {collapsed ? <ChevronRightIcon className="size-4" /> : <ChevronLeftIcon className="size-4" />}
+            <DevAssistSidebarIcon className="size-5" />
           </Button>
         </div>
 
-        <div className={cn("space-y-2 p-3", collapsed && "md:px-2")}>
+        <div className={cn("space-y-0.5 px-1.5 pt-4", collapsed && "md:px-0") }>
           <Button
             aria-label="Start a new chat"
-            className={cn("w-full justify-start", collapsed && "md:w-9 md:justify-center md:px-0")}
+            className={cn("h-9 w-full justify-start rounded-[10px] px-2.5 text-black hover:bg-black/[.06]", collapsed && "md:w-9 md:justify-center md:px-0")}
             onClick={() => window.location.assign("/")}
             type="button"
             variant="ghost"
           >
-            <PlusIcon className="size-4" />
+            <DevAssistNewChatIcon className="size-5" />
             <span className={cn(collapsed && "md:hidden")}>New chat</span>
           </Button>
-          <label className={cn("flex h-9 items-center gap-2 rounded-md border bg-background px-2.5 text-muted-foreground", collapsed && "md:hidden")}>
-            <SearchIcon className="size-4 shrink-0" />
+          <label className={cn("flex h-9 items-center gap-2 rounded-[10px] px-2.5 text-black hover:bg-black/[.04]", collapsed && "md:hidden")}>
+            <DevAssistSearchIcon className="size-5 shrink-0" />
             <span className="sr-only">Search chats</span>
             <input
               aria-label="Search chats"
@@ -123,8 +128,8 @@ export function LocalSessionSidebar({ currentSessionId }: { readonly currentSess
           </label>
         </div>
 
-        <div className={cn("min-h-0 flex-1 px-3 pb-3", collapsed && "md:px-2")}>
-          <div className={cn("mb-2 flex items-center justify-between px-2 text-muted-foreground text-xs", collapsed && "md:hidden")}>
+        <div className={cn("min-h-0 flex-1 px-1.5 pt-3", collapsed && "md:hidden")}>
+          <div className="mb-2 flex items-center justify-between px-2 text-muted-foreground text-xs">
             <span>Chats</span>
             <span>{state.status === "ready" ? state.data.sessions.length : ""}</span>
           </div>
@@ -161,7 +166,7 @@ function RuntimeStatusDialog() {
         </TooltipTrigger>
         <TooltipContent>Runtime status</TooltipContent>
       </Tooltip>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="fixed inset-y-0 right-0 left-auto h-dvh w-full max-w-[min(30rem,calc(100%-1rem))] translate-x-0 translate-y-0 overflow-y-auto rounded-none border-y-0 border-r-0 border-l border-black/[.08] bg-white p-5 shadow-[-12px_0_30px_rgb(13_13_13_/_6%)] data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-none">
         <DialogHeader className="pr-8">
           <div className="flex items-center justify-between gap-3">
             <DialogTitle>Local runtime status</DialogTitle>
@@ -223,7 +228,7 @@ function SessionList({
             type="button"
           >
             <span className="min-w-0">
-              <span className="block truncate font-mono text-xs">{shortenId(session.sessionId)}</span>
+              <span className="block truncate text-sm">{session.title ?? "Untitled chat"}</span>
               <time className="mt-0.5 block text-muted-foreground text-[11px]" dateTime={session.updatedAt}>
                 {formatTime(session.updatedAt)}
               </time>
@@ -246,7 +251,7 @@ function RuntimeStatus({ state }: { readonly state: AsyncState<LocalRuntimeRespo
   const { eve, microsandbox } = data;
   return (
     <div className="space-y-5 text-sm">
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-2 sm:grid-cols-2">
         <StatusRow label="Eve" value={eve.reachable ? "Reachable" : "Unavailable"} />
         <StatusRow label="Generated" value={formatTime(data.generatedAt)} />
         <StatusRow label="Model" value={eve.model ?? "Unknown"} />
@@ -262,9 +267,9 @@ function RuntimeStatus({ state }: { readonly state: AsyncState<LocalRuntimeRespo
       {eve.error ? <StatusText>Eve inspection is {eve.error}.</StatusText> : null}
       {microsandbox.error ? <StatusText>MicroSandbox metrics are unavailable.</StatusText> : null}
       {microsandbox.sandboxes.length > 0 ? (
-        <div className="overflow-x-auto rounded-md border">
+        <div className="overflow-x-auto rounded-[10px] border border-black/[.06]">
           <table className="w-full min-w-[36rem] text-left text-xs">
-            <thead className="border-b bg-muted/50 text-muted-foreground">
+            <thead className="border-b border-black/[.06] bg-black/[.03] text-muted-foreground">
               <tr>
                 <th className="px-3 py-2 font-medium">Sandbox</th>
                 <th className="px-3 py-2 font-medium">CPU</th>
@@ -291,7 +296,7 @@ function RuntimeStatus({ state }: { readonly state: AsyncState<LocalRuntimeRespo
 
 function StatusRow({ label, value }: { readonly label: string; readonly value: string }) {
   return (
-    <div className="min-w-0 border-b pb-2">
+    <div className="min-w-0 rounded-[10px] border border-black/[.06] p-3">
       <p className="text-muted-foreground text-xs">{label}</p>
       <p className="truncate pt-0.5 font-medium" title={value}>{value}</p>
     </div>
@@ -322,10 +327,6 @@ async function loadRuntime(setState: (state: AsyncState<LocalRuntimeResponse>) =
   } catch (error: unknown) {
     setState({ message: error instanceof Error ? error.message : "Local runtime status is unavailable.", status: "error" });
   }
-}
-
-function shortenId(value: string): string {
-  return value.length <= 28 ? value : `${value.slice(0, 14)}...${value.slice(-10)}`;
 }
 
 function formatTime(value: string): string {

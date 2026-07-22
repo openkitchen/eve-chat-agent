@@ -62,7 +62,7 @@ type DataRef = {
 
 ## `draw_chart` 契约
 
-图表数据应尽量接近当前 Recharts renderer 的需求。第一版接受受控 `recharts-cartesian-v1` 子集，不接受完整 Recharts props、JSX、callback/function、任意 CSS 或 HTML/SVG/JavaScript。
+图表数据应尽量接近当前 Recharts renderer 的需求。第一版只支持 Cartesian `line` 和 `bar`，接受受控 `recharts-cartesian-v1` 子集，不接受完整 Recharts props、JSX、callback/function、任意 CSS 或 HTML/SVG/JavaScript。pie、donut、area、scatter、radar 和 mixed chart 均不支持；Agent 必须直接说明限制，不得通过 Python 或 sandbox 文件模拟这些图表。
 
 ```ts
 const source: DataRef = {
@@ -112,7 +112,7 @@ Eve 将 authored tool 的完整 JSON result 作为 dynamic-tool part 交给 UI�
 - 第一版的共享工作格式是 CSV，不引入 SQLite data plane。MicroSandbox 已具备 Python 标准库 `sqlite3`，但仅在某个分析明确需要本地关系计算时由 Agent 脚本使用。
 - 不提供 `dataOperation(DataRef, description)`。自然语言变换会把执行语义和验证边界交还给模型；本 POC 使用可检查的 Python/Bash 脚本和明确的 CSV 输入/输出。
 - 不引入 subagent 处理当前 session 的表或 sandbox 文件。子 agent 有独立 state/sandbox，无法隐式共享该数据。
-- 不支持任意图表库 options、跨 session artifact 存储、对象存储下载或用户可执行脚本。
+- 不支持 pie、donut、area、scatter、radar、mixed chart、任意图表库 options、跨 session artifact 存储、对象存储下载或用户可执行脚本。
 
 ## 验收条件
 

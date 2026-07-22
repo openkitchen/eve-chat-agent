@@ -12,14 +12,14 @@ const COLORS = ["#0f766e", "#2563eb", "#c2410c", "#be123c", "#7c3aed", "#0369a1"
 export function DrawChartCard({ output }: { readonly output: DrawChartOutput }) {
   const title = output.spec.title ?? (output.spec.series.length === 1 ? output.spec.series[0]?.name ?? output.spec.series[0]?.dataKey : "Chart");
   return (
-    <section className="space-y-3">
+    <section className="space-y-3 rounded-[10px] border border-black/[.06] bg-white p-4">
       <div className="flex items-center gap-2 text-sm">
         <BarChart3Icon className="size-4 text-muted-foreground" />
         <span className="font-medium">{title}</span>
         <span className="text-muted-foreground">{output.provenance.rowCount} rows</span>
       </div>
       {output.data.length === 0 ? (
-        <div className="flex h-64 items-center justify-center border text-sm text-muted-foreground">No chart data.</div>
+        <div className="flex h-64 items-center justify-center rounded-[10px] border border-black/[.06] text-sm text-muted-foreground">No chart data.</div>
       ) : (
         <div className="h-64 w-full" role="img" aria-label={title}>
           <ResponsiveContainer height="100%" width="100%">

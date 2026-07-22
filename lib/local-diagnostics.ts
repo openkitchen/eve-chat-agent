@@ -6,6 +6,7 @@ import type {
   LocalSessionsResponse,
   SandboxMetricSummary,
 } from "./local-diagnostics-contracts";
+import { defaultSessionTitleDirectory, readSessionTitle } from "./session-titles";
 
 const SESSION_FILE = /^(wrun_[A-Za-z0-9]+)\.json$/;
 const SESSION_LIMIT = 50;
@@ -18,7 +19,10 @@ type RuntimeMetric = {
   readonly uptimeMs: number;
 };
 
-export async function listLocalSessions(runDirectory = defaultRunDirectory()): Promise<LocalSessionsResponse> {
+export async function listLocalSessions(
+  runDirectory = defaultRunDirectory(),
+  titleDirectory = defaultSessionTitleDirectory(),
+): Promise<LocalSessionsResponse> {
   let names: string[];
   try {
     names = await readdir(runDirectory);
@@ -51,8 +55,12 @@ export async function listLocalSessions(runDirectory = defaultRunDirectory()): P
 
   sessions.sort((left, right) => right.updatedAtMs - left.updatedAtMs || left.sessionId.localeCompare(right.sessionId));
   const truncated = sessions.length > SESSION_LIMIT;
+  const recentSessions = sessions.slice(0, SESSION_LIMIT);
   return {
-    sessions: sessions.slice(0, SESSION_LIMIT).map(({ sessionId, updatedAt }) => ({ sessionId, updatedAt })),
+    sessions: await Promise.all(recentSessions.map(async ({ sessionId, updatedAt }) => {
+      const title = await readSessionTitle(sessionId, titleDirectory);
+      return title ? { sessionId, title, updatedAt } : { sessionId, updatedAt };
+    })),
     source: "eve-local-run-manifests",
     truncated,
   };

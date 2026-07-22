@@ -1,9 +1,10 @@
 "use client";
 
-import { CheckIcon, CopyIcon } from "lucide-react";
+import { CheckIcon } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { DevAssistCopyIcon } from "@/components/icons/dev-assist-icons";
 
 export function formatDebugIdentifiers({
   sessionId,
@@ -43,7 +44,7 @@ export function SessionDiagnostics({
             type="button"
             variant="ghost"
           >
-            {copied ? <CheckIcon className="size-3.5" /> : <CopyIcon className="size-3.5" />}
+            {copied ? <CheckIcon className="size-3.5" /> : <DevAssistCopyIcon className="size-3.5" />}
           </Button>
         </TooltipTrigger>
         <TooltipContent>{copied ? "Copied" : "Copy Eve debug identifiers"}</TooltipContent>

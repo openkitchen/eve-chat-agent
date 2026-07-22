@@ -1,4 +1,4 @@
-import { mkdtemp, symlink, utimes, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, symlink, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -19,18 +19,21 @@ describe("local diagnostics", () => {
     temporaryRoots.push(root);
     const oldPath = join(root, "wrun_OLD.json");
     const newPath = join(root, "wrun_NEW.json");
+    const titles = join(root, "titles");
     await Promise.all([
       writeFile(oldPath, "{}"),
       writeFile(newPath, "{}"),
       writeFile(join(root, "not-a-session.json"), "{}"),
     ]);
     await symlink(newPath, join(root, "wrun_LINK.json"));
+    await mkdir(titles);
+    await writeFile(join(titles, "wrun_NEW.json"), JSON.stringify({ title: "Newest chat" }));
     await utimes(oldPath, new Date("2026-01-01T00:00:00.000Z"), new Date("2026-01-01T00:00:00.000Z"));
     await utimes(newPath, new Date("2026-01-02T00:00:00.000Z"), new Date("2026-01-02T00:00:00.000Z"));
 
-    await expect(listLocalSessions(root)).resolves.toEqual({
+    await expect(listLocalSessions(root, titles)).resolves.toEqual({
       sessions: [
-        { sessionId: "wrun_NEW", updatedAt: "2026-01-02T00:00:00.000Z" },
+        { sessionId: "wrun_NEW", title: "Newest chat", updatedAt: "2026-01-02T00:00:00.000Z" },
         { sessionId: "wrun_OLD", updatedAt: "2026-01-01T00:00:00.000Z" },
       ],
       source: "eve-local-run-manifests",

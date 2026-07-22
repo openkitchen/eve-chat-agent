@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import ExcelJS from "exceljs";
 import { describe, expect, it } from "vitest";
-import { FILE_ARTIFACT_LIMITS } from "./contracts";
+import { FILE_ARTIFACT_LIMITS, rechartsCartesianSpecSchema } from "./contracts";
 import type { StoredTableData } from "./core";
 import { drawChart, exportStoredTable, materializeStoredTableCsv, parseAttachment, queryStoredTable } from "./core";
 
@@ -67,6 +67,23 @@ describe("file artifact parsing", () => {
     worksheet.getCell(FILE_ARTIFACT_LIMITS.sourceRowsMax + 3, 1).value = "1";
     const bytes = new Uint8Array(await workbook.xlsx.writeBuffer());
     await expect(parseAttachment(bytes, "oversized.xlsx", ids())).rejects.toThrow("row POC limit");
+  });
+});
+
+describe("chart contract", () => {
+  it("accepts only the supported Cartesian chart types", () => {
+    expect(rechartsCartesianSpecSchema.safeParse({
+      renderer: "recharts-cartesian-v1",
+      chart: { type: "line" },
+      xAxis: { dataKey: "month" },
+      series: [{ dataKey: "amount", type: "line" }],
+    }).success).toBe(true);
+    expect(rechartsCartesianSpecSchema.safeParse({
+      renderer: "recharts-cartesian-v1",
+      chart: { type: "pie" },
+      xAxis: { dataKey: "region" },
+      series: [{ dataKey: "amount", type: "pie" }],
+    }).success).toBe(false);
   });
 });
 

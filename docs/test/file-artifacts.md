@@ -52,6 +52,12 @@
 2. 断言 `inspect_attachment` 返回两个稳定候选；Agent 使用 `ask_question`，不在用户选择前调用 `query_table` 或 `materialize_table`。
 3. 用户选择后，后续工具只能使用该候选的 `tableId`。
 
+### 5. 不支持的图表类型
+
+1. 请求 pie、donut、area、scatter、radar 或 mixed chart。
+2. 断言 Agent 说明当前仅支持 `line` 和 `bar`，并询问是否改为支持类型。
+3. 断言不调用 `materialize_table`、`draw_chart`、Python/Bash 或其他 sandbox 文件工具来模拟该图表。
+
 ## 自动检查
 
 ```bash
@@ -60,7 +66,7 @@ npm run test:file-artifacts
 npm run build:eve
 ```
 
-Eve eval 使用真实模型，验证工具顺序与关键调用；它不是单元测试的替代品。单元测试必须覆盖 CSV 物化、chart schema 校验、数值 series 拒绝和 CSV 导出公式转义。组件测试必须覆盖 schema 有效的下载/多 series chart、失败回退，以及 `materialize_table` 不显示 sandbox 路径。
+Eve eval 使用真实模型，验证工具顺序、unsupported chart 不触发分析工具与关键调用；它不是单元测试的替代品。单元测试必须覆盖 CSV 物化、chart schema 校验、数值 series 拒绝和 CSV 导出公式转义。组件测试必须覆盖 schema 有效的下载/多 series chart、失败回退，以及 `materialize_table` 不显示 sandbox 路径。
 
 ## 浏览器检查
 

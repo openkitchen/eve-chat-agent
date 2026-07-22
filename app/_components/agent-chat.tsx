@@ -3,7 +3,7 @@
 import type { UserContent } from "ai";
 import type { SessionState } from "eve/client";
 import { useEveAgent } from "eve/react";
-import { AlertCircleIcon, PaperclipIcon, XIcon } from "lucide-react";
+import { AlertCircleIcon, XIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   Conversation,
@@ -21,6 +21,7 @@ import {
   usePromptInputAttachments,
 } from "@/components/ai-elements/prompt-input";
 import { cn } from "@/lib/utils";
+import { DevAssistAttachIcon } from "@/components/icons/dev-assist-icons";
 import { AgentMessage } from "./agent-message";
 import { LocalDiagnosticsControls, LocalSessionSidebar } from "./local-diagnostics-controls";
 import { SessionDiagnostics } from "./session-diagnostics";
@@ -85,6 +86,7 @@ function AgentChatSession({
   readonly initialEvents?: RecoveredEveSession["initialEvents"];
   readonly initialSession?: SessionState;
 }) {
+  const [sessionListRefreshKey, setSessionListRefreshKey] = useState(0);
   const agent = useEveAgent({
     initialEvents,
     initialSession,
@@ -92,6 +94,9 @@ function AgentChatSession({
       if (session.sessionId) {
         replaceSessionUrl(session.sessionId);
       }
+    },
+    onFinish() {
+      setSessionListRefreshKey((value) => value + 1);
     },
   });
   const [uploadError, setUploadError] = useState<string>();
@@ -141,6 +146,7 @@ function AgentChatSession({
     <>
       <PromptInput
         accept={FILE_ACCEPT}
+        className="rounded-[28px] border-black/[.08] bg-white px-1 shadow-[0_10px_24px_rgb(13_13_13_/_5%)] focus-within:border-black/20"
         maxFileSize={FILE_BYTES_MAX}
         maxFiles={1}
         onError={({ message }) => setUploadError(message)}
@@ -159,14 +165,14 @@ function AgentChatSession({
   );
 
   return (
-    <main className="flex h-dvh overflow-hidden bg-background text-foreground">
-      <LocalSessionSidebar currentSessionId={agent.session.sessionId} />
+    <main className="flex h-dvh overflow-hidden bg-white text-foreground">
+      <LocalSessionSidebar currentSessionId={agent.session.sessionId} refreshKey={sessionListRefreshKey} />
       <section className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="grid h-14 shrink-0 grid-cols-[1fr_auto_1fr] items-center px-4 pl-14 md:pl-4">
-          <div className="flex items-center gap-2">
+        <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between gap-3 border-b border-black/[.03] bg-white/88 px-4 pl-14 backdrop-blur-md md:pl-5">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="truncate text-[13px] font-semibold text-black/90">{AGENT_NAME}</span>
             {isEmpty ? null : <StatusDot status={agent.status} />}
           </div>
-          <span className="truncate text-muted-foreground text-sm">{AGENT_NAME}</span>
           <div className="flex justify-end"><LocalDiagnosticsControls /></div>
         </header>
 
@@ -209,18 +215,18 @@ function AgentChatSession({
 
       <div
         className={cn(
-          "mx-auto w-full px-4 sm:px-6",
+          "relative z-[1] w-full bg-linear-to-b from-transparent via-white/80 to-white px-4 pt-3 backdrop-blur-md sm:px-6",
           isEmpty
-            ? "flex max-w-xl flex-1 flex-col items-center justify-center gap-8 pb-[10vh]"
-            : "max-w-3xl shrink-0 pb-6",
+            ? "flex flex-1 flex-col items-center justify-center gap-8 pb-[10vh]"
+            : "shrink-0 pb-4",
         )}
       >
         {isEmpty ? (
           <div className="flex flex-col items-center gap-3 text-center">
-            <h1 className="font-medium text-5xl tracking-tighter">{AGENT_NAME}</h1>
+            <h1 className="text-4xl font-semibold">{AGENT_NAME}</h1>
           </div>
         ) : null}
-        <div className="w-full">{composer}</div>
+        <div className="mx-auto w-full max-w-3xl">{composer}</div>
       </div>
       </section>
     </main>
@@ -266,7 +272,7 @@ function AttachmentControl({ disabled, onOpen }: { readonly disabled: boolean; r
         }}
         tooltip="Upload CSV or XLSX"
       >
-        <PaperclipIcon className="size-4" />
+        <DevAssistAttachIcon className="size-4" />
       </PromptInputButton>
     </>
   );

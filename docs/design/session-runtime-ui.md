@@ -27,6 +27,8 @@ Eve 0.24.6 的公开 HTTP API 有：`GET /eve/v1/info`、单个 session 的 stre
 
 Eve 将本地 durable stream 的 run manifest 放在 `.eve/.workflow-data/streams/runs/<sessionId>.json`。该 manifest 是当前开发 runtime 的内部存储格式，不是 Eve public contract，因此本 UI 只把它用作本机索引，绝不解析二进制 stream chunks 来生成消息标题或历史内容。
 
+根 Agent 的 `message.received` hook 在首条用户消息被 Eve durable stream 接收后，立即在本项目拥有的 `.eve/local-session-titles/<sessionId>.json` 写入 generic fallback title `New chat`。该 fallback 不含用户原文；它消除标题完全依赖模型 tool compliance 的风险。`set_session_title` 仅可将 fallback 替换一次为模型生成的短标题，后续 tool call 不可覆盖该语义标题。metadata 记录 `{ title, source }`；旧的仅 `{ title }` 记录按既有语义标题处理。它不属于 Eve durable stream，也不影响会话恢复。
+
 服务器端扫描时必须：
 
 - 固定根目录为当前项目的 `.eve/.workflow-data/streams/runs`，不接收客户端提供的路径或 glob；
@@ -45,6 +47,7 @@ GET /api/local/sessions
 ```ts
 type LocalSessionSummary = {
   sessionId: string;
+  title?: string;
   updatedAt: string; // manifest mtime, ISO-8601
 };
 
@@ -63,7 +66,7 @@ type LocalSessionsResponse = {
 
 页面已有的 `fetchRecoveredEveSession()` 仍以 `GET /eve/v1/session/:id/stream` 重放并取得最新 continuation token。该请求失败、stream 不可恢复或 session 无权限时，保持当前的“恢复失败”状态；列表项不等于可恢复性保证。
 
-UI 放置在聊天 header 的 history icon button。弹出 sheet/dialog 展示 session ID 的短格式和本地更新时间；点击行立即导航。它不提供删除、重命名、搜索、跨项目聚合或“当前 session 一定 active”的标签。
+UI 在左侧列表展示 title 和本地更新时间；旧 session 没有 metadata 时显示 `Untitled chat`。点击行仍以 session ID 导航和恢复。title 写入完成后，首轮结束回调刷新列表。它不提供删除、用户重命名、跨项目聚合或“当前 session 一定 active”的标签。
 
 ## 运行时状态
 
@@ -122,7 +125,7 @@ UI 以 header 的 activity/status icon button 打开 modal。打开时 fetch 一
 
 ```text
 AgentChat header
-  -> History button -> LocalSessionDialog -> GET /api/local/sessions
+  -> LocalSessionSidebar -> GET /api/local/sessions
                         -> click -> ?session_id=... -> existing Eve stream recovery
   -> Runtime button -> LocalRuntimeDialog -> GET /api/local/runtime
                         -> Eve /eve/v1/info + MicroSandbox metrics snapshot
@@ -142,10 +145,34 @@ AgentChat header
 
 ## 非目标
 
-- Eve session 删除、TTL、搜索、标题生成、跨浏览器同步或多用户会话管理。
+- Eve session 删除、TTL、用户编辑标题、跨浏览器同步或多用户会话管理。
 - 自动关闭 idle MSB、手工 VM stop、CPU 阈值报警或 host process 管理。
 - 将 Phoenix trace、完整 prompt/tool payload 或 `.eve` 原始事件嵌入聊天 UI。
 
 ## Concept Delta
 
-`sessionId`、`Eve inspection`、`sandbox` 和 `MicroSandbox metrics` 是既有框架/SDK 术语。`本地 session 索引`、`运行时状态`、`heuristic mapping` 是此 POC 的 UI/API 提议术语，不是业务领域概念。仓库缺少 glossary、context map 与 decision record；本文不将它们声明为 canonical。
+### Reused canonical terms
+
+当前没有可复用的 canonical terms。`Temporary Data` 和 `Capability Contract` 在 [glossary](../../references/glossary.md) 中仍为 `proposed`。
+
+### Newly proposed / working terms
+
+| candidate_term | type | rationale | overlaps_with | intended_scope | owner | target_decision_date | escalation_trigger | status |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `session title metadata` | technical | 存放由 session lifecycle hook 提供、可由首轮 Agent 语义化的本地列表短标题 | `Temporary Data` | local session UI POC | Architecture Working Group | TBD | 跨项目或多用户使用前 | proposed |
+
+### Deprecated aliases touched
+
+无。
+
+### Decision links
+
+- `references/concept-governance.md`
+- `references/glossary.md`
+- `references/concepts/agent-platform.md`
+- `references/concept-decisions/2026-07-19-information-context-vocabulary.md`
+
+### Governance completeness verdict
+
+- `BLOCKED`
+- Reason: `session title metadata` 仍是未经 owner 批准的 POC working term，本文不将其固化为平台 canonical concept。
